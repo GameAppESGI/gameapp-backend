@@ -88,4 +88,22 @@ router.get("/get-current-user", authMiddleware, async (req, res) => {
     }
 });
 
+// get all users
+router.get("/get-all-users", authMiddleware, async (req,res) => {
+    try {
+        const allUsers = await User.find({ _id: { $ne: req.body.userId} });
+        res.send({
+          success: true,
+          message: "Users fetched successfully",
+          data: allUsers  
+        });
+    } catch (error) {
+        res.send({
+            success: false,
+            message: error.message,
+          });
+    }
+})
+
+
 module.exports = router;
