@@ -29,7 +29,7 @@ router.get("/get-all-chats", authMiddleware, async (req, res) => {
             {
                 $in: [req.body.userId],
             },
-        });
+        }).populate("members").sort({updateAt: -1});
         res.send({
             success: true,
             message: "Chats fetched successfully",
