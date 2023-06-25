@@ -8,12 +8,11 @@ router.post('/new-message', async (req, res) => {
     try {
         const newMessage = new Message(req.body)
         const savedMessage = await newMessage.save();
-        await Chat.findOneAndUpdate({ _id: req.body.chat },
+        await Chat.findOneAndUpdate(
+            { _id: req.body.chat },
             {
                 lastMessage: savedMessage._id,
-                unread: {
-                    $inc: 1,
-                }
+                $inc: { unreadMessages: 1 },
             }
         );
         res.send({
