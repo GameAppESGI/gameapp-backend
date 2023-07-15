@@ -20,7 +20,7 @@ const io = require("socket.io")(server, {
         methods: ["GET", "POST"]
     },
 });
-
+let onlineUsers = [];
 io.on("connection", (socket) => {
     socket.on("join-room", (userId) => {
         socket.join(userId);
@@ -32,6 +32,18 @@ io.on("connection", (socket) => {
 
     socket.on("read-all-messages", (data) => {
         io.to(data.members[0]).to(data.members[1]).emit("unread-messages-cleared", data);
+    });
+
+    socket.on("connected", (userId) => {
+        if(!onlineUsers.includes(userId)) {
+            onlineUsers.push(userId);
+        }
+        io.emit("online-users", onlineUsers);
+    });
+
+    socket.on("go-offline", (userId) => {
+        onlineUsers = onlineUsers.filter((user) => user !== userId);
+        io.emit("online-users", onlineUsers);
     });
 });
 
