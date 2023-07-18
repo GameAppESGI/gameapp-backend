@@ -19,5 +19,33 @@ router.post("/start-new-game", async (req, res) => {
     }
 });
 
+router.get("/get-active-games/:chatId", async (req,res) => {
+    try {
+        const game = await Game.find({chat: req.params.chatId, end: false });
+        if(game.length > 0) {
+            res.send({
+                success: true,
+                message: "Active game found",
+                data: game
+            });
+        }
+        else {
+            res.send({
+                success: true,
+                message: "No active game found",
+                data: ""
+            });
+        }
+
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: "Error fetching the games",
+            error: error.message,
+        });
+    }
+})
+
 
 module.exports = router;
