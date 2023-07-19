@@ -29,11 +29,9 @@ const io = require("socket.io")(server, {
 let onlineUsers = [];
 let data_from_client = {};
 
-const pythonProcess = spawn('python', ['morpion.py.py']);
-pythonProcess.stdout.setMaxListeners(25);
-
 io.on("connection", (socket) => {
     socket.on("join-room", (userId) => {
+        console.log(`SOCKET = ${socket.id}, USER = ${userId}`);
         socket.join(userId);
     })
 
@@ -54,20 +52,18 @@ io.on("connection", (socket) => {
     });
 
     socket.on("start-game", (game) => {
-        data_from_client = {init: {players: 2}};
+
         io.to(game.members[0]).to(game.members[1]).emit("game-started", game.chat);
-        executeGameAction(socket,game.members);
-    });
 
-    socket.on("test-socket", (data) => {
-        console.log(data);
-    });
+        const pythonProcess = spawn('python', ['morpion.py.py']);
+        pythonProcess.stdout.setMaxListeners(25);
+        data_from_client = {init: {players: 2}};
+        executeGameAction(pythonProcess, socket, game.members);
 
-
-    socket.on("send-game-action-to-server", (gameAction) => {
-        data_from_client = gameAction.action;
-        executeGameAction(socket, gameAction.members);
-
+        socket.on("send-game-action-to-server", (gameAction) => {
+            data_from_client = gameAction.action;
+            executeGameAction(pythonProcess, socket, gameAction.members);
+        });
     });
 
     socket.on("connected", (userId) => {
@@ -84,7 +80,7 @@ io.on("connection", (socket) => {
     });
 });
 
-function executeGameAction(socket, members) {
+function executeGameAction(pythonProcess, socket, members) {
     pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
     console.log(JSON.stringify(data_from_client));
     pythonProcess.stdout.on("data", data => {
