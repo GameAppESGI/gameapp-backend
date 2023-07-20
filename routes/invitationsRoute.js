@@ -38,9 +38,9 @@ router.get('/get-all-invitations/:chatId', async(req,res) => {
     }
 });
 
-router.post('/cancel/:chatId', async (req, res) => {
+router.post('/cancel/:invitationId', async (req, res) => {
     try {
-        await Invitation.deleteOne({chat: req.params.chatId});
+        await Invitation.deleteOne({_id: req.params.invitationId});
         res.send({
             success: true,
             message: "Invitation deleted successfully",
@@ -54,5 +54,28 @@ router.post('/cancel/:chatId', async (req, res) => {
         });
     }
 });
+
+router.post("/accept/:invitationId", async (req,res) => {
+    try {
+        const invitationToAccept = await Invitation.findOne({_id: req.params.invitationId});
+        invitationToAccept.accepted = true;
+        if(invitationToAccept) {
+            const updatedInvitation = await invitationToAccept.save();
+            res.send({
+                success: true,
+                message: "Invitation accepted successfully",
+                data: updatedInvitation,
+            });
+        }
+
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: "Error accepting invitation",
+            error: error.message,
+        });
+    }
+})
 
 module.exports = router;

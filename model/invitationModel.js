@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const invitSchema = new mongoose.Schema(
     {
+        _id: {
+            type: String,
+            required: true
+        },
         chat: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "chats",
@@ -13,6 +17,10 @@ const invitSchema = new mongoose.Schema(
         receiver: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "users",
+        },
+        accepted: {
+            type: Boolean,
+            default: false
         },
         game: {
             type: String,

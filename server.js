@@ -44,11 +44,16 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send-game-invitation", (invitation) => {
+        console.log("GAME INVITATION = ", invitation._id);
         io.to(invitation.members[0]).to(invitation.members[1]).emit("game-invitation-sent", invitation);
     });
 
+    socket.on("accept-invitation", (invitation) => {
+        io.to(invitation.members[0]).to(invitation.members[1]).emit("game-invitation-accepted", invitation);
+    });
+
     socket.on("cancel-invitation", (invitation) => {
-        io.to(invitation.members[0]).to(invitation.members[1]).emit("invitation-canceled");
+        io.to(invitation.members[0]).to(invitation.members[1]).emit("invitation-canceled", invitation.toastId);
     });
 
     socket.on("start-game", (game) => {
