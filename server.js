@@ -29,10 +29,24 @@ const io = require("socket.io")(server, {
 let onlineUsers = [];
 let data_from_client = {};
 
+const gameIo = io.of("/game");
+let parties = {};
+let playersJoined = [];
+gameIo.on("connection", (socket) => {
+    socket.on("join-game-room", (data) => {
+        socket.join(data.chatId);
+        console.log(`user ${data.username} joine the room ${data.chatId} and socket = ${socket.id}`);
+    })
+
+});
+
+
+
 io.on("connection", (socket) => {
+    //console.log(`connected with ${socket.id}`);
     socket.on("join-room", (userId) => {
-        console.log(`SOCKET = ${socket.id}, USER = ${userId}`);
         socket.join(userId);
+        //console.log(`user ${userId} connected in room ${socket.id} `)
     })
 
     socket.on("send-new-message", (message) => {
@@ -44,7 +58,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send-game-invitation", (invitation) => {
-        console.log("GAME INVITATION = ", invitation._id);
         io.to(invitation.members[0]).to(invitation.members[1]).emit("game-invitation-sent", invitation);
     });
 
@@ -57,8 +70,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("start-game", (game) => {
-
-        io.to(game.members[0]).to(game.members[1]).emit("game-started", game.chat);
 
         const pythonProcess = spawn('python', ['morpion.py.py']);
         pythonProcess.stdout.setMaxListeners(25);
@@ -87,10 +98,13 @@ io.on("connection", (socket) => {
 
 function executeGameAction(pythonProcess, socket, members) {
     pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
-    console.log(JSON.stringify(data_from_client));
+    console.log("action send to server: ", JSON.stringify(data_from_client))
     pythonProcess.stdout.on("data", data => {
         const message = data.toString();
         const json_object = JSON.parse(message);
+        if(json_object.game_state?.game_over) {
+            pythonProcess.kill();
+        }
         io.to(members[0]).to(members[1]).emit("send-game-data-to-clients", json_object);
     });
 }

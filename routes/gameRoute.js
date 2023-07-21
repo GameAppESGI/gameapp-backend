@@ -22,6 +22,9 @@ router.post("/start-new-game", async (req, res) => {
 router.get("/get-active-games/:chatId", async (req,res) => {
     try {
         const game = await Game.find({chat: req.params.chatId, end: false });
+        if(game.length === 2) {
+            await Game.deleteOne({_id: game[1]._id});
+        }
         if(game.length > 0) {
             res.send({
                 success: true,

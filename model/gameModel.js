@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 const gameSchema = new mongoose.Schema(
     {
+        _id: {
+            type: String,
+            required: true
+        },
         chat: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "chats",
