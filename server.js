@@ -30,20 +30,12 @@ let onlineUsers = [];
 let data_from_client = {};
 
 const gameIo = io.of("/game");
-let parties = {};
-let playersJoined = [];
-
-function createGameRoom(socket, chatId) {
-    socket.join(chatId);
-}
-
-function joinGameRoom(socket, chatId) {
-    socket.join(chatId);
-}
 let nbrOfPlayers = 0;
+let connectedPlayers = [];
 gameIo.on("connection", (socket) => {
 
-    socket.on("test", (chatId, username) => {
+    socket.on("join-game-room", (chatId, username, userId) => {
+        connectedPlayers.push(userId);
         nbrOfPlayers++;
         socket.join(chatId);
         console.log(`${username} connected to game-room ${chatId}, nbrOfPlayers = ${nbrOfPlayers}`);
@@ -61,36 +53,18 @@ gameIo.on("connection", (socket) => {
         }
 
         socket.on("update-game", (action) => {
-            console.log("action received from other player");
+            console.log("action received from other player", action);
             data_from_client = action;
             gameIo.to(chatId).emit("send-game-update-to-other", action);
         })
     })
-
-
-
-
-    /*
-    socket.on("create-game-room", (chatId, username) => {
-        createGameRoom(socket, chatId);
-        console.log(`game room created and ${username} that accepted invitation is connected`);
-    })
-    socket.on("join-to-room", (chatId, username) => {
-        joinGameRoom(socket, chatId);
-        console.log(`${username} that sent the invitation is also connected`);
-        data_from_client = {init: {players: 2}};
-    })
-
-     */
 });
 
 
 
 io.on("connection", (socket) => {
-    //console.log(`connected with ${socket.id}`);
     socket.on("join-room", (userId) => {
         socket.join(userId);
-        //console.log(`user ${userId} connected in room ${socket.id} `)
     })
 
     socket.on("send-new-message", (message) => {
@@ -102,26 +76,17 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send-game-invitation", (invitation) => {
-        io.to(invitation.members[0]).to(invitation.members[1]).emit("game-invitation-sent", invitation);
+        io.to(invitation.sender).to(invitation.receiver).emit("game-invitation-sent", invitation);
     });
 
     socket.on("accept-invitation", (invitation) => {
-        io.to(invitation.otherUser).emit("game-invitation-accepted", invitation);
+        console.log("INVITATION = ",invitation);
+        io.to(invitation.sender).emit("game-invitation-accepted", invitation);
     });
 
     socket.on("cancel-invitation", (invitation) => {
         io.to(invitation.members[0]).to(invitation.members[1]).emit("invitation-canceled", invitation.toastId);
     });
-
-    /*
-    socket.on("start-game", (game) => {
-
-        const pythonProcess = spawn('python', ['morpion.py.py']);
-        pythonProcess.stdout.setMaxListeners(25);
-        executeGameAction(pythonProcess, socket, game.members);
-    });
-
-     */
 
     socket.on("connected", (userId) => {
         if (!onlineUsers.includes(userId)) {
@@ -146,10 +111,4 @@ function executeGameAction(pythonProcess, socket, chatId) {
         gameIo.to(chatId).emit("send-game-data-to-clients", json_object);
     });
 }
-
-
-
-
-
-
 server.listen(port, () => console.log(`Server ok running on port ${port}`));
