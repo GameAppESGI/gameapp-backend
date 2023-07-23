@@ -48,6 +48,30 @@ router.get("/get-active-games/:chatId", async (req,res) => {
             error: error.message,
         });
     }
+});
+
+router.post("/end/:chatId", async (req, res) => {
+    try {
+        const gameToEnd = await Game.findOne({chat: req.params.chatId, end: false});
+        if(gameToEnd) {
+            gameToEnd.end = true;
+            const updatedGame = await gameToEnd.save();
+            res.send({
+                success: true,
+                message: "Game ended successfully",
+                data: updatedGame,
+            });
+        }
+
+
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: "Error ending the game",
+            error: error.message,
+        });
+    }
 })
 
 

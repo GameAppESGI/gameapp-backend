@@ -34,21 +34,26 @@ let nbrOfPlayers = 0;
 let connectedPlayers = [];
 gameIo.on("connection", (socket) => {
 
-    socket.on("join-game-room", (chatId, username, userId) => {
+    socket.on("join-game-room", async (chatId, username, userId) => {
         connectedPlayers.push(userId);
         nbrOfPlayers++;
         socket.join(chatId);
         console.log(`${username} connected to game-room ${chatId}, nbrOfPlayers = ${nbrOfPlayers}`);
-        if(nbrOfPlayers === 2) {
+        if (nbrOfPlayers === 2) {
             console.log("pythonprocess can start");
             const pythonProcess = spawn('python', ['morpion.py.py']);
             pythonProcess.stdout.setMaxListeners(25);
             data_from_client = {init: {players: 2}};
-            executeGameAction(pythonProcess, socket, chatId);
+            await executeGameAction(pythonProcess, socket, chatId);
             nbrOfPlayers = 0;
-            socket.on("send-game-action-to-server", (gameAction) => {
+            socket.on("send-game-action-to-server", async (gameAction) => {
                 data_from_client = gameAction;
-                executeGameAction(pythonProcess, socket, chatId);
+                try{
+                    await executeGameAction(pythonProcess, socket, chatId);
+                }
+                catch (error) {
+                    console.log(error);
+                }
             });
         }
 
@@ -56,6 +61,16 @@ gameIo.on("connection", (socket) => {
             console.log("action received from other player", action);
             data_from_client = action;
             gameIo.to(chatId).emit("send-game-update-to-other", action);
+        })
+
+        socket.on("send-rematch", (userId) => {
+            console.log(`user ${userId} asked for a rematch`);
+            gameIo.to(chatId).emit("rematch-sent", (userId));
+        })
+
+        socket.on("end-game", () => {
+            console.log("end-game received");
+            socket.leave(chatId);
         })
     })
 });
@@ -103,12 +118,30 @@ io.on("connection", (socket) => {
 });
 
 function executeGameAction(pythonProcess, socket, chatId) {
-    pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
-    console.log("action send to server: ", JSON.stringify(data_from_client))
-    pythonProcess.stdout.on("data", data => {
-        const message = data.toString();
-        const json_object = JSON.parse(message);
-        gameIo.to(chatId).emit("send-game-data-to-clients", json_object);
+    return new Promise((resolve, reject) => {
+        pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
+        console.log("action send to server: ", JSON.stringify(data_from_client))
+        pythonProcess.stdout.on("data", data => {
+            const message = data.toString();
+            try {
+                const json_object = JSON.parse(message);
+                if(json_object.displays) {
+                    gameIo.to(chatId).emit("send-game-data-to-clients", json_object);
+                    resolve(true);
+                    if(json_object.game_state?.game_over === true) {
+                        console.log("process kill");
+                        pythonProcess.kill();
+                        //pythonProcess.stdin.write(JSON.stringify(""));
+                    }
+                }
+                else {
+                    resolve(false);
+                }
+            }
+            catch (error) {
+                console.log(error);
+            }
+        });
     });
 }
 server.listen(port, () => console.log(`Server ok running on port ${port}`));
