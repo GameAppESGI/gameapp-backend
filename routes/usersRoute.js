@@ -91,7 +91,7 @@ router.get("/get-current-user", authMiddleware, async (req, res) => {
 // get all users
 router.get("/get-all-users", authMiddleware, async (req,res) => {
     try {
-        const allUsers = await User.find({ _id: { $ne: req.body.userId} });
+        const allUsers = await User.find({});
         res.send({
           success: true,
           message: "Users fetched successfully",
@@ -102,6 +102,25 @@ router.get("/get-all-users", authMiddleware, async (req,res) => {
             success: false,
             message: error.message,
           });
+    }
+})
+
+router.post("/update-points/:userId",authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findOne({_id: req.params.userId});
+        user.points += 1;
+        await user.save();
+        res.send({
+            success: true,
+            message: "User updated successfully",
+            data: user
+        });
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: error.message,
+        });
     }
 })
 

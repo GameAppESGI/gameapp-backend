@@ -74,5 +74,32 @@ router.post("/end/:chatId", async (req, res) => {
     }
 })
 
+router.post("/add-action/:chatId", async (req, res) => {
+    try {
+        const gameToUpdate = await Game.findOne({chat: req.params.chatId, end:false});
+        if(gameToUpdate) {
+            const action = {
+                x: req.body.actions[0].x,
+                y: req.body.actions[0].y,
+                player: req.body.actions[0].player
+            }
+            gameToUpdate.actions.push(action);
+            await gameToUpdate.save();
+            res.send({
+                success: true,
+                message: "Game updated successfully",
+                data: gameToUpdate,
+            });
+        }
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: "Error updating the game",
+            error: error.message,
+        });
+    }
+})
+
 
 module.exports = router;

@@ -1,5 +1,23 @@
 const mongoose = require('mongoose');
 
+const actionSchema = new mongoose.Schema(
+    {
+        x: {
+            type: Number,
+            required: true
+
+        },
+        y: {
+            type: Number,
+            required: true
+        },
+        player: {
+            type: Number,
+            required: true
+        }
+    }
+);
+
 const gameSchema = new mongoose.Schema(
     {
         _id: {
@@ -19,6 +37,14 @@ const gameSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        actions: {
+            type: [
+                {
+                    type: actionSchema,
+                    required: true
+                }
+            ]
+        }
     },
     {
         timestamps: true

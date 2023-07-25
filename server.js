@@ -66,12 +66,7 @@ gameIo.on("connection", (socket) => {
         socket.on("send-rematch", (userId) => {
             console.log(`user ${userId} asked for a rematch`);
             gameIo.to(chatId).emit("rematch-sent", (userId));
-        })
-
-        socket.on("end-game", () => {
-            console.log("end-game received");
-            socket.leave(chatId);
-        })
+        });
     })
 });
 
