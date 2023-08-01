@@ -50,6 +50,37 @@ router.get("/get-active-games/:chatId", async (req,res) => {
     }
 });
 
+router.get("/get-all-games/:userId", async (req,res) => {
+    try {
+        const game = await Game.find({
+            players: req.params.userId
+        });
+
+        if(game.length > 0) {
+            res.send({
+                success: true,
+                message: "History found",
+                data: game
+            });
+        }
+        else {
+            res.send({
+                success: true,
+                message: "No history game found",
+                data: ""
+            });
+        }
+
+    }
+    catch (error) {
+        res.send({
+            success: false,
+            message: "Error fetching the history",
+            error: error.message,
+        });
+    }
+});
+
 router.post("/end/:chatId", async (req, res) => {
     try {
         const gameToEnd = await Game.findOne({chat: req.params.chatId, end: false});

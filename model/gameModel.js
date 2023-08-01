@@ -37,6 +37,15 @@ const gameSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        players:
+            {
+                type: [
+                    {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "users",
+                    },
+                ],
+            },
         actions: {
             type: [
                 {
