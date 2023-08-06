@@ -17,7 +17,7 @@ app.use("/api/users", usersRoute);
 app.use("/api/chats", chatsRoute);
 app.use("/api/messages", messagesRoute);
 app.use("/api/game-invitations", invitationsRoute);
-app.use("/api/games/", gameRoute);
+app.use("/api/games", gameRoute);
 
 const server = require("http").createServer(app);
 const io = require("socket.io")(server, {

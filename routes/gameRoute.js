@@ -1,5 +1,10 @@
 const router = require("express").Router();
 const Game = require("../model/gameModel");
+const expressFileUpload = require("express-fileupload");
+const path = require('path');
+const gameFolder = path.join(__dirname, "games");
+router.use(expressFileUpload());
+
 router.post("/start-new-game", async (req, res) => {
     try {
         const newGame = new Game(req.body);
@@ -127,6 +132,26 @@ router.post("/add-action/:chatId", async (req, res) => {
         res.send({
             success: false,
             message: "Error updating the game",
+            error: error.message,
+        });
+    }
+})
+
+router.post("/upload-game", async (req,res) => {
+    try {
+        const { game } = req.files;
+        game.mv(path.join(gameFolder, game.name));
+
+        res.send({
+            success: true,
+            message: "Game uploaded successfully",
+            data: "",
+        });
+    }
+    catch(error) {
+        res.send({
+            success: false,
+            message: "Error uploading the game",
             error: error.message,
         });
     }
