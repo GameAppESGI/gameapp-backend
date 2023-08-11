@@ -30,8 +30,39 @@ let onlineUsers = [];
 let data_from_client = {};
 
 const gameIo = io.of("/game");
+const gameReplayIO = io.of("/replay");
 let nbrOfPlayers = 0;
 let connectedPlayers = [];
+
+gameReplayIO.on("connection", (socket) => {
+    socket.on("activate-game-replay", async (gameActions, userId) => {
+        const pythonProcess = spawn('python', ['morpion.py.py']);
+        console.log("process started");
+        pythonProcess.stdin.write(JSON.stringify({init: {players: 2}}) + "\n");
+        console.log(gameActions);
+        for(let i=0; i<gameActions.length; i++) {
+            const actionForServer = JSON.stringify({actions: [{x: gameActions[i].x, y: gameActions[i].y, player: gameActions[i].player}]});
+            console.log("action for server = ", actionForServer);
+            console.log(`ACTIONS LENGTH = ${gameActions.length} && I = ${i}`);
+            setTimeout(() => {
+                pythonProcess.stdin.write(JSON.stringify({actions: [{x: gameActions[i].x, y: gameActions[i].y, player: gameActions[i].player}]}) + "\n");
+            }, 500);
+        }
+        await pythonProcess.stdout.on("data", data => {
+            try {
+                const json_object = JSON.parse(data.toString())
+                if(json_object?.game_state?.game_over === true) {
+                    pythonProcess.kill("SIGINT");
+                    socket.emit("send-game-display", json_object.displays[0]);
+                }
+            }
+            catch (error) {
+                console.log(error.message);
+            }
+        });
+    })
+});
+
 gameIo.on("connection", (socket) => {
 
     socket.on("join-game-room", async (chatId, username, userId) => {
@@ -126,7 +157,6 @@ function executeGameAction(pythonProcess, socket, chatId) {
                     if(json_object.game_state?.game_over === true) {
                         console.log("process kill");
                         pythonProcess.kill();
-                        //pythonProcess.stdin.write(JSON.stringify(""));
                     }
                 }
                 else {
