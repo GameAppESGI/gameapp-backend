@@ -9,6 +9,8 @@ const chatsRoute = require("./routes/chatRoute");
 const messagesRoute = require("./routes/messagesRoute");
 const invitationsRoute = require("./routes/invitationsRoute");
 const gameRoute = require("./routes/gameRoute");
+const gameRoomRoute = require("./routes/gameRoomRoute");
+
 const {spawn} = require("child_process");
 
 app.use(express.json());
@@ -18,6 +20,7 @@ app.use("/api/chats", chatsRoute);
 app.use("/api/messages", messagesRoute);
 app.use("/api/game-invitations", invitationsRoute);
 app.use("/api/games", gameRoute);
+app.use("/api/game-rooms", gameRoomRoute);
 
 const server = require("http").createServer(app);
 const io = require("socket.io")(server, {
@@ -31,10 +34,65 @@ let data_from_client = {};
 
 const gameIo = io.of("/game");
 const gameReplayIO = io.of("/replay");
+const gameRoomIO = io.of("/gameroom");
+
 let nbrOfPlayers = 0;
 let connectedPlayers = [];
+let listOfParties = [];
+
+function createParty(gameRoomId, username) {
+    const party = {
+        id: gameRoomId,
+        players: [username]
+    };
+    listOfParties.push(party);
+}
+
+gameRoomIO.on("connection", (socket) => {
+    console.log(`${socket.id} connected`);
+    socket.on("join-game-room", (gameRoomId, username) => {
+        socket.join(gameRoomId);
+        let exists = false;
+        let i = 0;
+        for(i=0; i<listOfParties.length; i++) {
+            if(listOfParties[i].id === gameRoomId) {
+                exists = true;
+                break;
+
+            }
+        }
+        if(exists && !listOfParties[i].players.includes(username)) {
+            listOfParties[i].players.push(username);
+        }
+        else {
+            createParty(gameRoomId, username);
+            console.log(`party created with id ${gameRoomId}`);
+        }
+
+        console.log(`list of parties = ${listOfParties[i].players}`);
+        gameRoomIO.to(gameRoomId).emit("connected", listOfParties[i].players);
+    });
+
+    socket.on('disconnecting', (gameRoomId, username) => {
+        let exists = false;
+        let i = 0;
+        for(i=0; i<listOfParties.length; i++) {
+            if(listOfParties[i].id === gameRoomId) {
+                exists = true;
+                break;
+
+            }
+        }
+        if(exists) {
+            listOfParties[i].players.pop(username);
+            console.log(`${username} disconnected from room with id ${gameRoomId}, ${listOfParties[i].players}`);
+        }
+        gameRoomIO.to(gameRoomId).emit("disconnected", listOfParties[i]);
+    });
+})
 
 gameReplayIO.on("connection", (socket) => {
+
     socket.on("activate-game-replay", async (gameActions, userId) => {
         const pythonProcess = spawn('python', ['morpion.py.py']);
         console.log("process started");
@@ -55,6 +113,27 @@ gameReplayIO.on("connection", (socket) => {
                     pythonProcess.kill("SIGINT");
                     socket.emit("send-game-display", json_object.displays[0]);
                 }
+            }
+            catch (error) {
+                console.log(error.message);
+            }
+        });
+    })
+
+    socket.on("continue-game", gameAction => {
+        const pythonProcess = spawn('python', ['morpion.py.py']);
+        console.log("process started");
+        pythonProcess.stdin.write(JSON.stringify({init: {players: 2}}) + "\n");
+        const actionForServer = JSON.stringify({actions: [{x: gameAction.x, y: gameAction.y, player: gameAction.player}]});
+        console.log(`FOR SERVER = ${actionForServer}`);
+        setTimeout(() => {
+            pythonProcess.stdin.write(actionForServer + "\n");
+        }, 500);
+
+        pythonProcess.stdout.on("data", data => {
+            try {
+                const json_object = JSON.parse(data.toString())
+                socket.emit("send-game-display", json_object.displays[0]);
             }
             catch (error) {
                 console.log(error.message);

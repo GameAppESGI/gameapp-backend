@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const chatSchema = new mongoose.Schema(
     {
+        gameRoomChat:
+            {
+                type: Boolean,
+                default: false,
+            },
         members: 
         {
             type: [

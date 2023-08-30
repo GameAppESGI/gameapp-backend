@@ -31,6 +31,7 @@ router.get("/get-all-chats", authMiddleware, async (req, res) => {
             {
                 $in: [req.body.userId],
             },
+            gameRoomChat: false,
         }).populate("members").populate("lastMessage").sort({updatedAt: -1});
         res.send({
             success: true,
