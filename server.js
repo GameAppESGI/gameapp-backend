@@ -157,8 +157,14 @@ gameIo.on("connection", (socket) => {
         socket.join(chatId);
         console.log(`${username} connected to game-room ${chatId}, nbrOfPlayers = ${nbrOfPlayers}`);
         if (nbrOfPlayers === 2) {
-            console.log("pythonprocess can start = ", game );
-            let pythonProcess = spawn(language, [game]);
+            console.log("pythonprocess can start = ", language );
+            let pythonProcess = {};
+            switch (language) {
+                case "java": pythonProcess = spawn(language, ["-jar", "checkers.jar"]);
+                break;
+                case "python" : pythonProcess = spawn(language, [game]);
+                break;
+            }
 
             pythonProcess.stdout.setMaxListeners(25);
             data_from_client = {init: {players: 2}};
@@ -237,6 +243,7 @@ function executeGameAction(pythonProcess, socket, chatId) {
         console.log("action send to server: ", JSON.stringify(data_from_client))
         pythonProcess.stdout.on("data", data => {
             const message = data.toString();
+            console.log(data);
             try {
                 const json_object = JSON.parse(message);
                 if(json_object.displays) {
