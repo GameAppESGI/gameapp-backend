@@ -73,6 +73,13 @@ gameRoomIO.on("connection", (socket) => {
         gameRoomIO.to(gameRoomId).emit("connected", listOfParties[i].players);
     });
 
+    socket.on("send-new-message", (gameRoomId, message) => {
+        console.log(`new message received: ${message}`);
+        gameRoomIO.to(gameRoomId).emit("receive-message", message);
+    })
+
+
+
     socket.on('disconnecting', (gameRoomId, username) => {
         let exists = false;
         let i = 0;
@@ -144,14 +151,15 @@ gameReplayIO.on("connection", (socket) => {
 
 gameIo.on("connection", (socket) => {
 
-    socket.on("join-game-room", async (chatId, username, userId) => {
+    socket.on("join-game-room", async (chatId, username, userId, game, language) => {
         connectedPlayers.push(userId);
         nbrOfPlayers++;
         socket.join(chatId);
         console.log(`${username} connected to game-room ${chatId}, nbrOfPlayers = ${nbrOfPlayers}`);
         if (nbrOfPlayers === 2) {
-            console.log("pythonprocess can start");
-            const pythonProcess = spawn('python', ['morpion.py.py']);
+            console.log("pythonprocess can start = ", game );
+            let pythonProcess = spawn(language, [game]);
+
             pythonProcess.stdout.setMaxListeners(25);
             data_from_client = {init: {players: 2}};
             await executeGameAction(pythonProcess, socket, chatId);
@@ -196,6 +204,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send-game-invitation", (invitation) => {
+        console.log("INVITATION = ", invitation);
         io.to(invitation.sender).to(invitation.receiver).emit("game-invitation-sent", invitation);
     });
 

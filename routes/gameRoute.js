@@ -1,8 +1,9 @@
 const router = require("express").Router();
 const Game = require("../model/gameModel");
+const PlayGame = require("../model/playGameModel");
 const expressFileUpload = require("express-fileupload");
 const path = require('path');
-const gameFolder = path.join(__dirname, "games");
+const gameFolder = path.join("./", "");
 router.use(expressFileUpload());
 const {spawn} = require("child_process");
 
@@ -143,17 +144,53 @@ router.post("/upload-game", async (req,res) => {
     try {
         const { game } = req.files;
         game.mv(path.join(gameFolder, game.name));
-
         res.send({
             success: true,
             message: "Game uploaded successfully",
-            data: "",
+            data: "savedGame",
         });
     }
     catch(error) {
         res.send({
             success: false,
             message: "Error uploading the game",
+            error: error.message,
+        });
+    }
+})
+
+router.post("/upload-game-db", async(req,res) => {
+    try {
+        const newGame = new PlayGame(req.body);
+        const savedGame = await newGame.save();
+        res.send({
+            success: true,
+            message: "Game uploaded successfully",
+            data: savedGame,
+        });
+    }
+    catch(error) {
+        res.send({
+            success: false,
+            message: "Error uploading the game to database",
+            error: error.message,
+        });
+    }
+})
+
+router.post("/get-all-games", async(req, res) => {
+    try {
+        const listOfGames = await PlayGame.find({});
+        res.send({
+            success: true,
+            message: "Games fetched successfully",
+            data: listOfGames,
+        });
+    }
+    catch(error) {
+        res.send({
+            success: false,
+            message: "Error fetching the games",
             error: error.message,
         });
     }

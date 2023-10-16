@@ -25,6 +25,10 @@ const invitSchema = new mongoose.Schema(
         game: {
             type: String,
             required: true,
+        },
+        language: {
+            type: String,
+            required: true,
         }
     },
     {
