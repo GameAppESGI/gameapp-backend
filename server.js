@@ -242,11 +242,12 @@ function executeGameAction(pythonProcess, socket, chatId) {
         pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
         console.log("action send to server: ", JSON.stringify(data_from_client))
         pythonProcess.stdout.on("data", data => {
-            const message = data.toString();
-            message.replace(/ {4}|[\t\n\r]/gm,'')
+            let message = data.toString();
+            message = message.replace(/ {4}|[\t\n\r]/gm,'')
             console.log(message);
             try {
                 const json_object = JSON.parse(message);
+                console.log(json_object.displays);
                 if(json_object.displays) {
                     gameIo.to(chatId).emit("send-game-data-to-clients", json_object);
                     resolve(true);
