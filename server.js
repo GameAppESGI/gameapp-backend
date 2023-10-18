@@ -164,6 +164,10 @@ gameIo.on("connection", (socket) => {
                 break;
                 case "python" : pythonProcess = spawn(language, [game]);
                 break;
+                case "c" : pythonProcess = spawn(language, [game]);
+                    break;
+                case "rust" : pythonProcess = spawn(language, [game]);
+                    break;
             }
 
             pythonProcess.stdout.setMaxListeners(25);
@@ -244,10 +248,10 @@ function executeGameAction(pythonProcess, socket, chatId) {
         pythonProcess.stdout.on("data", data => {
             let message = data.toString();
             message = message.replace(/ {4}|[\t\n\r]/gm,'')
-            console.log(message);
+            let test = message.split("xxx");
+            console.log(test[1]);
             try {
-                const json_object = JSON.parse(message);
-                console.log(json_object.displays);
+                const json_object = JSON.parse(test[1]);
                 if(json_object.displays) {
                     gameIo.to(chatId).emit("send-game-data-to-clients", json_object);
                     resolve(true);
