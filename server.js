@@ -99,9 +99,8 @@ gameRoomIO.on("connection", (socket) => {
 })
 
 gameReplayIO.on("connection", (socket) => {
-
-    socket.on("activate-game-replay", async (gameActions, gameEnd, gameName, gameLanguage) => {
-        let pythonProcess = {};
+    let pythonProcess = {};
+    socket.on("activate-game-replay", async (gameName, gameLanguage) => {
         switch (gameLanguage) {
             case "java": pythonProcess = spawn(gameLanguage, ["-jar", gameName]);
                 break;
@@ -112,54 +111,22 @@ gameReplayIO.on("connection", (socket) => {
             case "rust" : pythonProcess = spawn(gameLanguage, [gameName]);
                 break;
         }
-        console.log("process started");
-        pythonProcess.stdin.write(JSON.stringify({init: {players: 2}}) + "\n");
-        console.log(gameActions);
-        let count = 0;
-        for(let i=0; i<gameActions.length; i++) {
-            count += 1;
-            const actionForServer = JSON.stringify({actions: [{x: gameActions[i].x, y: gameActions[i].y, player: gameActions[i].player}]});
-            console.log("action for server = ", actionForServer);
-            console.log(`ACTIONS LENGTH = ${gameActions.length} && I = ${i}`);
-            setTimeout(() => {
-                pythonProcess.stdin.write(JSON.stringify({actions: [{x: gameActions[i].x, y: gameActions[i].y, player: gameActions[i].player}]}) + "\n");
-            }, 500);
+        await executeGameActionForReplay(pythonProcess, socket, {init: {players: 2}});
+    });
+
+    socket.on("execute-one-action", async (gameAction) => {
+        console.log("gameAction received = ", gameAction);
+        try{
+            await executeGameActionForReplay(pythonProcess, socket, gameAction);
         }
-        await pythonProcess.stdout.on("data", data => {
-            try {
-                const json_object = JSON.parse(data.toString())
-                //console.log(json_object);
-                if(json_object?.game_state?.game_over === true || (gameActions.length <= count-3)) {
-                    console.log("game over");
-                    pythonProcess.kill("SIGINT");
-                    socket.emit("send-game-display", json_object.displays[0]);
-                }
-            }
-            catch (error) {
-                console.log(error.message);
-            }
-        });
-    })
+        catch (error) {
+            console.log(error);
+        }
+    });
 
-    socket.on("continue-game", gameAction => {
-        const pythonProcess = spawn('python', ['morpion.py.py']);
-        console.log("process started");
-        pythonProcess.stdin.write(JSON.stringify({init: {players: 2}}) + "\n");
-        const actionForServer = JSON.stringify({actions: [{x: gameAction.x, y: gameAction.y, player: gameAction.player}]});
-        console.log(`FOR SERVER = ${actionForServer}`);
-        setTimeout(() => {
-            pythonProcess.stdin.write(actionForServer + "\n");
-        }, 500);
 
-        pythonProcess.stdout.on("data", data => {
-            try {
-                const json_object = JSON.parse(data.toString())
-                socket.emit("send-game-display", json_object.displays[0]);
-            }
-            catch (error) {
-                console.log(error.message);
-            }
-        });
+    socket.on("disconnect", (socket) => {
+        console.log("disconnected");
     })
 });
 
@@ -184,14 +151,11 @@ gameIo.on("connection", (socket) => {
                     break;
             }
 
-            pythonProcess.stdout.setMaxListeners(25);
-            data_from_client = {init: {players: 2}};
-            await executeGameAction(pythonProcess, socket, chatId);
+            await executeGameAction(pythonProcess, socket, chatId, {init: {players: 2}});
             nbrOfPlayers = 0;
             socket.on("send-game-action-to-server", async (gameAction) => {
-                data_from_client = gameAction;
                 try{
-                    await executeGameAction(pythonProcess, socket, chatId);
+                    await executeGameAction(pythonProcess, socket, chatId, gameAction);
                 }
                 catch (error) {
                     console.log(error);
@@ -201,7 +165,6 @@ gameIo.on("connection", (socket) => {
 
         socket.on("update-game", (action) => {
             console.log("action received from other player", action);
-            data_from_client = action;
             gameIo.to(chatId).emit("send-game-update-to-other", action);
         })
 
@@ -209,6 +172,11 @@ gameIo.on("connection", (socket) => {
             console.log(`user ${userId} asked for a rematch`);
             gameIo.to(chatId).emit("rematch-sent", (userId));
         });
+
+        socket.on("disconnect", () => {
+            console.log("disconnected");
+            gameIo.to(chatId).emit("player-disconnected", socket.id);
+        })
     })
 });
 
@@ -255,10 +223,47 @@ io.on("connection", (socket) => {
     });
 });
 
-function executeGameAction(pythonProcess, socket, chatId) {
+function executeGameActionForReplay(pythonProcess, socket, action) {
     return new Promise((resolve, reject) => {
-        pythonProcess.stdin.write(JSON.stringify(data_from_client) + "\n");
-        console.log("action send to server: ", JSON.stringify(data_from_client))
+        pythonProcess.stdin.write(JSON.stringify(action) + "\n");
+        pythonProcess.stdin.end();
+        console.log("action send to server: ", JSON.stringify(action))
+        pythonProcess.stdout.on("data", data => {
+            let message = data.toString();
+            message = message.replace(/ {4}|[\t\n\r]/gm,'');
+            message = message.replace(/ {4}|[^\x00-\xFF]/g, "");
+            let filteredMessage = "";
+            for(let i=0; i<message.length;i++) {
+                if(message[i].charCodeAt(0) >= 48 && message[i].charCodeAt(0) < 127 || message[i].charCodeAt(0) === 34 || message[i].charCodeAt(0) === 44 ) {
+                    filteredMessage = filteredMessage + message[i];
+                }
+            }
+            console.log(filteredMessage);
+            try {
+                const json_object = JSON.parse(filteredMessage);
+                if(json_object.displays) {
+                    socket.emit("send-game-data-to-client", json_object);
+                    resolve(true);
+                    if(json_object.game_state?.game_over === true) {
+                        console.log("process kill");
+                        pythonProcess.kill();
+                    }
+                }
+                else {
+                    resolve(false);
+                }
+            }
+            catch (error) {
+                console.log(error);
+            }
+        });
+    });
+}
+
+function executeGameAction(pythonProcess, socket, chatId, action) {
+    return new Promise((resolve, reject) => {
+        pythonProcess.stdin.write(JSON.stringify(action) + "\n");
+        console.log("action send to server: ", JSON.stringify(action))
         pythonProcess.stdout.on("data", data => {
             let message = data.toString();
             message = message.replace(/ {4}|[\t\n\r]/gm,'');
