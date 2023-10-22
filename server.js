@@ -2,7 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const app = express();
 const dbConfig = require("./config/dbConfig");
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 8080;
 
 const usersRoute = require("./routes/usersRoute");
 const chatsRoute = require("./routes/chatRoute");
@@ -25,7 +25,7 @@ app.use("/api/game-rooms", gameRoomRoute);
 const server = require("http").createServer(app);
 const io = require("socket.io")(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "http://34.155.51.27",
         methods: ["GET", "POST"]
     },
 });
