@@ -209,6 +209,10 @@ gameIo.on("connection", (socket) => {
             console.log(`user ${userId} asked for a rematch`);
             gameIo.to(chatId).emit("rematch-sent", (userId));
         });
+
+        socket.on("disconnect", () => {
+            gameIo.to(chatId).emit("player-disconnected");
+        })
     })
 });
 
