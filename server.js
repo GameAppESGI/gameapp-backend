@@ -39,6 +39,7 @@ const gameRoomIO = io.of("/gameroom");
 let nbrOfPlayers = 0;
 let connectedPlayers = [];
 let listOfParties = [];
+let listConnected = [];
 
 function createParty(gameRoomId, username) {
     const party = {
@@ -49,11 +50,11 @@ function createParty(gameRoomId, username) {
 }
 
 gameRoomIO.on("connection", (socket) => {
-    console.log(`${socket.id} connected`);
+    /*
     socket.on("join-game-room", (gameRoomId, username) => {
         socket.join(gameRoomId);
         let exists = false;
-        let i = 0;
+        let i;
         for(i=0; i<listOfParties.length; i++) {
             if(listOfParties[i].id === gameRoomId) {
                 exists = true;
@@ -78,23 +79,27 @@ gameRoomIO.on("connection", (socket) => {
         gameRoomIO.to(gameRoomId).emit("receive-message", message);
     })
 
+     */
+    socket.on("join-game-room", (gameRoomId, username) => {
+        socket.join(gameRoomId);
 
-
-    socket.on('disconnecting', (gameRoomId, username) => {
-        let exists = false;
-        let i = 0;
-        for(i=0; i<listOfParties.length; i++) {
-            if(listOfParties[i].id === gameRoomId) {
-                exists = true;
-                break;
-
+        socket.on("connected", (username) => {
+            if (!listConnected.includes(username)) {
+                listConnected.push(username);
             }
-        }
-        if(exists) {
-            listOfParties[i].players.pop(username);
-            console.log(`${username} disconnected from room with id ${gameRoomId}, ${listOfParties[i].players}`);
-        }
-        gameRoomIO.to(gameRoomId).emit("disconnected", listOfParties[i]);
+            gameRoomIO.emit("online-users", listConnected);
+        });
+
+        socket.on("disconnect", (username) => {
+            console.log("disconnected");
+            gameRoomIO.to(gameRoomId).emit("player-disconnected", username);
+        });
+
+    });
+
+    socket.on("send-new-message", (gameRoomId, message) => {
+        console.log(message);
+        gameRoomIO.to(gameRoomId).emit("receive-message", message);
     });
 })
 
