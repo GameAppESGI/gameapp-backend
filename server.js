@@ -179,9 +179,9 @@ gameIo.on("connection", (socket) => {
             console.log("pythonprocess can start = ", language );
             let pythonProcess = {};
             switch (language) {
-                case "java": pythonProcess = spawn(language, ["-jar", game]);
+                case "java": pythonProcess = spawn('/usr/bin/java', ["-jar", game]);
                 break;
-                case "python" : pythonProcess = spawn(language, [game]);
+                case "python" : pythonProcess = spawn('/usr/bin/python3', [game]);
                 break;
                 case "c" : pythonProcess = spawn(language, [game]);
                     break;
