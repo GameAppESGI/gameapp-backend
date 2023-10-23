@@ -108,9 +108,9 @@ gameReplayIO.on("connection", (socket) => {
     socket.on("activate-game-replay", async (gameActions, gameEnd, gameName, gameLanguage) => {
         let pythonProcess = {};
         switch (gameLanguage) {
-            case "java": pythonProcess = spawn(gameLanguage, ["-jar", gameName]);
+            case "java": pythonProcess = spawn('/usr/bin/java', ["-jar", gameName]);
                 break;
-            case "python" : pythonProcess = spawn(gameLanguage, [gameName]);
+            case "python" : pythonProcess = spawn('/usr/bin/python3', [gameName]);
                 break;
             case "c" : pythonProcess = spawn(gameLanguage, [gameName]);
                 break;
